@@ -27,7 +27,7 @@ spec:
     matchLabels:
       app: jawlb
       service: myservice
-  replicas: 1
+  replicas: 3
   template:
     metadata:
       labels:
@@ -41,6 +41,16 @@ spec:
         ports:
         - containerPort: 8000
           name: grpclb
+        readinessProbe:
+          tcpSocket:
+            port: grpclb
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: grpclb
+          initialDelaySeconds: 15
+          periodSeconds: 60
         env:
         # The name of the upstream service we want
         # to balance
