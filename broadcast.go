@@ -31,11 +31,6 @@ func newBroadcast(ctx context.Context, src <-chan ServerList) *broadcast {
 
 func (b *broadcast) addListener(listener Listener) {
 	b.add <- listener
-
-	// send initial state if present once on registration
-	if len(b.state) > 0 {
-		go func() { listener <- b.state }()
-	}
 }
 
 func (b *broadcast) remListener(listener Listener) {
@@ -51,11 +46,17 @@ func (b *broadcast) run() {
 			return
 		case l := <-b.add:
 			b.tgts[l] = true
+
+			// send initial state if present once on registration
+			if len(b.state) > 0 {
+				go func() { l <- b.state }()
+			}
 		case l := <-b.rem:
 			delete(b.tgts, l)
 		case state := <-b.src:
 			b.state = state
 			for tgt := range b.tgts {
+				tgt := tgt
 				go func() { tgt <- state }()
 			}
 		}
