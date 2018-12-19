@@ -24,6 +24,9 @@ var cfg = struct {
 	Service       string `desc:"Name of the service in Kubernetes" required:"true"`
 	LabelSelector string `desc:"Label selector for the service (foo=bar,baz=bang)"`
 	TargetPort    string `default:"grpc" desc:"Target port name to forward to"`
+
+	WatchMaxRetries int           `default:"60" desc:"Number of times to retry establishing the Kubernetess watch"`
+	WatchRetryDelay time.Duration `default:"1s" desc:"Delay between retries"`
 }{}
 
 func main() {
