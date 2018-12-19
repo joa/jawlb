@@ -37,14 +37,20 @@ func watchService(ctx context.Context) (_ <-chan ServerList, err error) {
 
 	ep := startWatch(client)
 	ch := make(chan ServerList)
+	ticker := time.NewTicker(cfg.WatchTimeout)
 
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
+				ticker.Stop()
 				ep.Stop()
 				close(ch)
 				return
+			case <-ticker.C:
+				log.Printf("restarting the watch after timeout")
+				ep.Stop()
+				ep = startWatch(client)
 			case res := <-ep.ResultChan():
 				endpoint, ok := res.Object.(*v1.Endpoints)
 

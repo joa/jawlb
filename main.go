@@ -27,6 +27,7 @@ var cfg = struct {
 
 	WatchMaxRetries int           `default:"60" desc:"Number of times to retry establishing the Kubernetess watch"`
 	WatchRetryDelay time.Duration `default:"1s" desc:"Delay between retries"`
+	WatchTimeout    time.Duration `default:"30s" desc:"Timeout for the watch until we acquire a new one"`
 }{}
 
 func main() {
