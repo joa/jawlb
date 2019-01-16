@@ -44,19 +44,19 @@ func watchService(ctx context.Context) (_ <-chan ServerList, err error) {
 			select {
 			case <-ctx.Done():
 				ticker.Stop()
-				ep.Stop()
+				go stopWatch(ep)
 				close(ch)
 				return
 			case <-ticker.C:
 				log.Printf("restarting the watch after timeout")
-				ep.Stop()
+				go stopWatch(ep)
 				ep = startWatch(client)
 			case res := <-ep.ResultChan():
 				endpoint, ok := res.Object.(*v1.Endpoints)
 
 				if !ok {
 					log.Printf("watch encountered an error: %+v", res.Object)
-					ep.Stop()
+					go stopWatch(ep)
 					ep = startWatch(client)
 					continue
 				}
@@ -101,6 +101,8 @@ func watchService(ctx context.Context) (_ <-chan ServerList, err error) {
 }
 
 func startWatch(client *kubernetes.Clientset) watch.Interface {
+	log.Printf("start watching endpoints in '%s' with labels '%s'", cfg.Namespace, cfg.LabelSelector)
+
 	for i := 0; i < cfg.WatchMaxRetries; i++ {
 		ep, err := client.CoreV1().Endpoints(cfg.Namespace).Watch(meta_v1.ListOptions{
 			LabelSelector: cfg.LabelSelector,
@@ -117,6 +119,23 @@ func startWatch(client *kubernetes.Clientset) watch.Interface {
 	}
 
 	panic(fmt.Sprintf("couldn't start watch after %d retries", cfg.WatchMaxRetries))
+}
+
+func stopWatch(w watch.Interface) {
+	log.Printf("stopping a watch endpoint")
+	done := make(chan bool)
+
+	go func() {
+		w.Stop()
+		done <- true
+	}()
+
+	select {
+	case <-time.After(5 * time.Minute):
+		log.Println("closing a watch timed out after 5m")
+	case <-done:
+		log.Println("successfully stopped a watch")
+	}
 }
 
 func getConfig() (cfg *rest.Config, err error) {
