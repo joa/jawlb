@@ -99,10 +99,12 @@ import 	_ "google.golang.org/grpc/balancer/grpclb"
 // When dialing, gRPC's DNS resolver will issue a SRV lookup and
 // because we're so nice to provide the grpclb entry, everything
 // works as expected
+//
+// If no SRV record exists, gRPC will fall back to a vanilla connection
+// without the loadbalancer.
 
 conn, err := grpc.Dial(
-	"dns:///myservice-lb:8000",        // must use the dns resolver and port exposed at the balancer
-    grpc.WithBalancerName("grpclb"),   // select the grpclb balancer strat
+	"dns:///myservice-lb",        // must use the dns resolver
 	grpc.WithInsecure())
 
 // ... magic 🧙‍♀️
