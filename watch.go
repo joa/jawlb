@@ -20,6 +20,10 @@ type Server struct {
 	Port int32
 }
 
+func (s Server) Equal(x Server) bool {
+	return s.Port == x.Port && s.IP.Equal(x.IP)
+}
+
 type ServerList []Server
 
 func watchService(ctx context.Context) (_ <-chan ServerList, err error) {

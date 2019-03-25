@@ -18,7 +18,7 @@ type broadcast struct {
 func newBroadcast(ctx context.Context, src <-chan ServerList) *broadcast {
 	b := &broadcast{
 		ctx:  ctx,
-		src:  src,
+		src:  newServerListFilter(ctx, src),
 		tgts: make(map[Listener]bool),
 		add:  make(chan Listener),
 		rem:  make(chan Listener),
@@ -49,15 +49,14 @@ func (b *broadcast) run() {
 
 			// send initial state if present once on registration
 			if len(b.state) > 0 {
-				go func() { l <- b.state }()
+				l <- b.state
 			}
 		case l := <-b.rem:
 			delete(b.tgts, l)
 		case state := <-b.src:
 			b.state = state
 			for tgt := range b.tgts {
-				tgt := tgt
-				go func() { tgt <- state }()
+				tgt <- state
 			}
 		}
 	}
