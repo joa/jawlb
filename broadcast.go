@@ -18,7 +18,7 @@ type broadcast struct {
 func newBroadcast(ctx context.Context, src <-chan ServerList) *broadcast {
 	b := &broadcast{
 		ctx:  ctx,
-		src:  newServerListFilter(ctx, src),
+		src:  filterEqualServerList(src),
 		tgts: make(map[Listener]bool),
 		add:  make(chan Listener),
 		rem:  make(chan Listener),
