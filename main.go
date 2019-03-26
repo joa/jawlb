@@ -94,7 +94,7 @@ func startServer(bc *broadcast) *grpc.Server {
 	}
 
 	srv := grpc.NewServer()
-	grpclb.RegisterLoadBalancerServer(srv, &lb{bc})
+	grpclb.RegisterLoadBalancerServer(srv, &lb{bc, 0})
 
 	go func() {
 		if err := srv.Serve(conn); err != nil {

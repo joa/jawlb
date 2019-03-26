@@ -15,17 +15,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-type Server struct {
-	IP   net.IP
-	Port int32
-}
-
-func (s Server) Equal(x Server) bool {
-	return s.Port == x.Port && s.IP.Equal(x.IP)
-}
-
-type ServerList []Server
-
 func watchService(ctx context.Context) (_ <-chan ServerList, err error) {
 	icc, err := getConfig()
 

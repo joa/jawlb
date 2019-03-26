@@ -1,8 +1,6 @@
 package main
 
-import (
-	"context"
-)
+import "context"
 
 type Listener chan<- ServerList
 

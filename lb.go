@@ -1,13 +1,15 @@
 package main
 
 import (
+	"github.com/joa/jawlb/internal/atomic"
 	grpclb "google.golang.org/grpc/balancer/grpclb/grpc_lb_v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type lb struct {
-	b *broadcast
+	b  *broadcast
+	rr int64
 }
 
 func (l *lb) BalanceLoad(req grpclb.LoadBalancer_BalanceLoadServer) error {
@@ -33,16 +35,14 @@ func (l *lb) BalanceLoad(req grpclb.LoadBalancer_BalanceLoadServer) error {
 	l.b.addListener(ch)
 	defer l.b.remListener(ch)
 
+	offset := int(atomic.IncWrapInt64(&l.rr))
+
 	for {
 		select {
 		case <-req.Context().Done():
 			return nil
 		case msg := <-ch:
-			var servers []*grpclb.Server
-
-			for _, server := range msg {
-				servers = append(servers, &grpclb.Server{IpAddress: server.IP, Port: server.Port})
-			}
+			servers := convertServerList(msg, offset)
 
 			err := req.Send(&grpclb.LoadBalanceResponse{
 				LoadBalanceResponseType: &grpclb.LoadBalanceResponse_ServerList{
@@ -57,4 +57,21 @@ func (l *lb) BalanceLoad(req grpclb.LoadBalancer_BalanceLoadServer) error {
 			}
 		}
 	}
+}
+
+func convertServerList(l ServerList, offset int) []*grpclb.Server {
+	var servers []*grpclb.Server
+
+	n := len(l)
+
+	for i := 0; i < n; i++ {
+		server := l[(i+offset)%n]
+		servers = append(servers, convertServer(server))
+	}
+
+	return servers
+}
+
+func convertServer(s Server) *grpclb.Server {
+	return &grpclb.Server{IpAddress: s.IP, Port: s.Port}
 }
