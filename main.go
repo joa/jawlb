@@ -24,6 +24,7 @@ var cfg = struct {
 	Service       string `desc:"Name of the service in Kubernetes" required:"true"`
 	LabelSelector string `desc:"Label selector for the service (foo=bar,baz=bang)"`
 	TargetPort    string `default:"grpc" desc:"Target port name to forward to"`
+	MaxServers    int    `default:"0" desc:"Maximum number of servers to return in response, 0 means unlimited"`
 
 	WatchMaxRetries int           `default:"60" desc:"Number of times to retry establishing the Kubernetess watch"`
 	WatchRetryDelay time.Duration `default:"1s" desc:"Delay between retries"`
@@ -94,7 +95,7 @@ func startServer(bc *broadcast) *grpc.Server {
 	}
 
 	srv := grpc.NewServer()
-	grpclb.RegisterLoadBalancerServer(srv, &lb{bc, 0})
+	grpclb.RegisterLoadBalancerServer(srv, &lb{bc, cfg.MaxServers})
 
 	go func() {
 		if err := srv.Serve(conn); err != nil {

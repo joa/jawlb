@@ -1,15 +1,17 @@
 package main
 
 import (
-	"github.com/joa/jawlb/internal/atomic"
+	"math/rand"
+	"time"
+
 	grpclb "google.golang.org/grpc/balancer/grpclb/grpc_lb_v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type lb struct {
-	b  *broadcast
-	rr int64
+	b   *broadcast
+	max int
 }
 
 func (l *lb) BalanceLoad(req grpclb.LoadBalancer_BalanceLoadServer) error {
@@ -35,14 +37,12 @@ func (l *lb) BalanceLoad(req grpclb.LoadBalancer_BalanceLoadServer) error {
 	l.b.addListener(ch)
 	defer l.b.remListener(ch)
 
-	offset := int(atomic.IncWrapInt64(&l.rr))
-
 	for {
 		select {
 		case <-req.Context().Done():
 			return nil
 		case msg := <-ch:
-			servers := convertServerList(msg, offset)
+			servers := convertServerList(msg, l.max)
 
 			err := req.Send(&grpclb.LoadBalanceResponse{
 				LoadBalanceResponseType: &grpclb.LoadBalanceResponse_ServerList{
@@ -59,14 +59,18 @@ func (l *lb) BalanceLoad(req grpclb.LoadBalancer_BalanceLoadServer) error {
 	}
 }
 
-func convertServerList(l ServerList, offset int) []*grpclb.Server {
-	var servers []*grpclb.Server
-
+func convertServerList(l ServerList, max int) []*grpclb.Server {
 	n := len(l)
+	if max > n || max == 0 {
+		max = n
+	}
+	servers := make([]*grpclb.Server, max)
 
-	for i := 0; i < n; i++ {
-		server := l[(i+offset)%n]
-		servers = append(servers, convertServer(server))
+	rand.Seed(time.Now().UnixNano())
+	for i := 0; i < max; i++ {
+		j := rand.Intn(n)
+		l[i], l[j] = l[j], l[i]
+		servers[i] = convertServer(l[i])
 	}
 
 	return servers

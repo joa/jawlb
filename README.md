@@ -52,6 +52,9 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 60
         env:
+        # Maximum number of servers to return in response, # default is 0 and it means unlimited
+        - name: JAWLB_MAXSERVERS
+          value: "5"
         # The name of the upstream service we want
         # to balance
         - name: JAWLB_SERVICE
