@@ -28,7 +28,7 @@ func watchService(ctx context.Context) (_ <-chan ServerList, err error) {
 		return
 	}
 
-	ep := startWatch(client)
+	ep := startWatch(ctx, client)
 	ch := make(chan ServerList)
 	ticker := time.NewTicker(cfg.WatchTimeout)
 
@@ -43,14 +43,14 @@ func watchService(ctx context.Context) (_ <-chan ServerList, err error) {
 			case <-ticker.C:
 				log.Printf("restarting the watch after timeout")
 				go stopWatch(ep)
-				ep = startWatch(client)
+				ep = startWatch(ctx, client)
 			case res := <-ep.ResultChan():
 				endpoint, ok := res.Object.(*v1.Endpoints)
 
 				if !ok {
 					log.Printf("watch encountered an error: %+v", res.Object)
 					go stopWatch(ep)
-					ep = startWatch(client)
+					ep = startWatch(ctx, client)
 					continue
 				}
 
@@ -93,11 +93,11 @@ func watchService(ctx context.Context) (_ <-chan ServerList, err error) {
 	return ch, nil
 }
 
-func startWatch(client *kubernetes.Clientset) watch.Interface {
+func startWatch(ctx context.Context, client *kubernetes.Clientset) watch.Interface {
 	log.Printf("start watching endpoints in '%s' with labels '%s'", cfg.Namespace, cfg.LabelSelector)
 
 	for i := 0; i < cfg.WatchMaxRetries; i++ {
-		ep, err := client.CoreV1().Endpoints(cfg.Namespace).Watch(meta_v1.ListOptions{
+		ep, err := client.CoreV1().Endpoints(cfg.Namespace).Watch(ctx, meta_v1.ListOptions{
 			LabelSelector: cfg.LabelSelector,
 			Watch:         true,
 		})
